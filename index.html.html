@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CivicFix - Civic Issue Reporter</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background:#f0f4f8; color:#333; }
+
+  /* NAVBAR */
+  .navbar {
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    color: white; padding: 15px 30px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  }
+  .navbar h2 { font-size: 22px; }
+  .nav-links { display: flex; gap: 10px; align-items: center; }
+  .nav-btn {
+    color: white; border: 1px solid rgba(255,255,255,0.5);
+    padding: 8px 16px; border-radius: 20px; cursor: pointer;
+    background: none; font-size: 14px; transition: all 0.3s;
+  }
+  .nav-btn:hover, .nav-btn.active { background: rgba(255,255,255,0.25); }
+  .nav-user { color: rgba(255,255,255,0.85); font-size: 14px; }
+
+  /* PAGES */
+  .page { display: none; }
+  .page.active { display: block; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 25px 20px; }
+
+  /* AUTH */
+  .auth-wrap { min-height: 88vh; display:flex; align-items:center; justify-content:center; }
+  .auth-box {
+    background: white; padding: 40px; border-radius: 16px;
+    width: 420px; box-shadow: 0 10px 40px rgba(0,0,0,0.12);
+  }
+  .auth-box h2 { text-align:center; margin-bottom:8px; color:#1a73e8; }
+  .auth-sub { text-align:center; color:#888; margin-bottom:25px; font-size:14px; }
+  .form-group { margin-bottom: 18px; }
+  .form-group label { display:block; font-weight:600; margin-bottom:6px; color:#555; font-size:14px; }
+  .form-group input, .form-group select, .form-group textarea {
+    width:100%; padding:12px 15px; border:2px solid #e0e0e0;
+    border-radius:8px; font-size:15px; transition:border 0.3s; outline:none; font-family:inherit;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:#1a73e8; }
+  .form-group textarea { height:90px; resize:vertical; }
+  .btn {
+    padding:12px 28px; border:none; border-radius:8px;
+    cursor:pointer; font-size:15px; font-weight:600; transition:all 0.3s;
+  }
+  .btn-primary { background:#1a73e8; color:white; }
+  .btn-primary:hover { background:#1558b0; transform:translateY(-1px); }
+  .btn-full { width:100%; }
+  .auth-footer { text-align:center; margin-top:20px; color:#888; font-size:14px; }
+  .auth-footer a { color:#1a73e8; cursor:pointer; font-weight:600; text-decoration:none; }
+  .demo-hint {
+    background:#e8f0fe; border-radius:8px; padding:12px 15px;
+    margin-bottom:20px; font-size:13px; color:#1a73e8; text-align:center;
+  }
+
+  /* STATS */
+  .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:15px; margin-bottom:25px; }
+  .stat-card {
+    background:white; border-radius:12px; padding:20px;
+    text-align:center; box-shadow:0 2px 10px rgba(0,0,0,0.07);
+  }
+  .stat-card h3 { font-size:36px; margin-bottom:5px; }
+  .stat-card p { color:#888; font-size:13px; font-weight:600; }
+  .s-total h3 { color:#1a73e8; }
+  .s-pending h3 { color:#e65100; }
+  .s-progress h3 { color:#1565c0; }
+  .s-resolved h3 { color:#2e7d32; }
+
+  /* PAGE HEADER */
+  .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+  .page-header-text h2 { font-size:24px; }
+  .page-header-text p { color:#888; margin-top:4px; font-size:14px; }
+
+  /* COMPLAINT CARDS (citizen view) */
+  .complaint-card {
+    background:white; border-radius:12px; padding:18px 20px;
+    margin-bottom:12px; display:flex; align-items:center; gap:18px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.07); transition:transform 0.2s;
+  }
+  .complaint-card:hover { transform:translateY(-2px); }
+  .complaint-icon {
+    width:70px; height:70px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:30px; flex-shrink:0;
+  }
+  .complaint-info { flex:1; }
+  .complaint-info h4 { font-size:16px; margin-bottom:4px; }
+  .complaint-info p { color:#888; font-size:13px; margin-top:2px; }
+
+  /* BADGE */
+  .badge { padding:5px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+  .badge-pending { background:#fff3e0; color:#e65100; }
+  .badge-progress { background:#e3f2fd; color:#1565c0; }
+  .badge-resolved { background:#e8f5e9; color:#2e7d32; }
+
+  /* FILTER TABS */
+  .filter-tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+  .filter-tab {
+    padding:8px 18px; border-radius:20px; border:1px solid #ddd;
+    background:white; cursor:pointer; font-size:13px; font-weight:600;
+    transition:all 0.3s; color:#555;
+  }
+  .filter-tab.active { background:#1a73e8; color:white; border-color:#1a73e8; }
+
+  /* TABLE */
+  .table-wrap { background:white; border-radius:12px; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,0.07); }
+  table { width:100%; border-collapse:collapse; }
+  th { background:#f5f7fa; padding:13px 15px; text-align:left; font-size:13px; color:#555; font-weight:700; }
+  td { padding:13px 15px; border-bottom:1px solid #f0f0f0; font-size:14px; vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:#fafbff; }
+  .status-select {
+    padding:6px 10px; border-radius:6px; border:1px solid #ddd;
+    font-size:13px; cursor:pointer; outline:none;
+  }
+
+  /* REPORT FORM */
+  .report-card { background:white; border-radius:12px; padding:30px; box-shadow:0 2px 15px rgba(0,0,0,0.08); }
+  .loc-box {
+    background:#e8f0fe; border-radius:8px; padding:12px 15px;
+    font-size:13px; color:#1a73e8; display:flex; align-items:center; gap:8px;
+  }
+  .alert { padding:12px 18px; border-radius:8px; margin-bottom:15px; font-size:14px; }
+  .alert-success { background:#e8f5e9; color:#2e7d32; }
+  .alert-error { background:#ffebee; color:#c62828; }
+
+  /* EMPTY STATE */
+  .empty-state { text-align:center; padding:60px 20px; }
+  .empty-state div { font-size:60px; margin-bottom:15px; }
+  .empty-state h3 { color:#555; margin-bottom:8px; }
+  .empty-state p { color:#aaa; font-size:14px; }
+
+  /* MODAL OVERLAY for success */
+  .toast {
+    position:fixed; bottom:30px; right:30px;
+    background:#323232; color:white; padding:14px 22px;
+    border-radius:10px; font-size:14px; z-index:9999;
+    box-shadow:0 4px 20px rgba(0,0,0,0.3);
+    display:none; animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from { transform:translateY(20px); opacity:0; } to { transform:translateY(0); opacity:1; } }
+
+  @media(max-width:700px) {
+    .stats-grid { grid-template-columns:repeat(2,1fr); }
+    .auth-box { width:95%; padding:25px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<div class="navbar">
+  <h2>🏙️ CivicFix</h2>
+  <div class="nav-links" id="navLinks">
+    <button class="nav-btn" onclick="showPage('login')">Login</button>
+    <button class="nav-btn" onclick="showPage('register')">Register</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">✅ Done!</div>
+
+<!-- ======================== LOGIN PAGE ======================== -->
+<div class="page active" id="page-login">
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <h2>👋 Welcome Back</h2>
+      <p class="auth-sub">Login to report or track civic issues</p>
+      <div class="demo-hint">
+        🎯 <strong>Demo:</strong> Use any email/password to login as Citizen &nbsp;|&nbsp;
+        Use <strong>admin@civic.com</strong> for Admin
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="loginEmail" placeholder="Enter your email" value="citizen@demo.com"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPass" placeholder="Enter password" value="demo123"/>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="doLogin()">🔐 Login</button>
+      <div class="auth-footer">Don't have an account? <a onclick="showPage('register')">Register here</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== REGISTER PAGE ======================== -->
+<div class="page" id="page-register">
+  <div class="auth-wrap">
+    <div class="auth-box">
+      <h2>📝 Create Account</h2>
+      <p class="auth-sub">Join CivicFix and help improve your city</p>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="regName" placeholder="Enter your full name"/>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="regEmail" placeholder="Enter your email"/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="regPass" placeholder="Create a password"/>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="doRegister()">✅ Register</button>
+      <div class="auth-footer">Already have an account? <a onclick="showPage('login')">Login here</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== CITIZEN DASHBOARD ======================== -->
+<div class="page" id="page-dashboard">
+  <div class="container">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h2 id="citizenWelcome">👋 Welcome!</h2>
+        <p>Track all your reported civic issues here</p>
+      </div>
+      <button class="btn btn-primary" onclick="showPage('report')">+ Report New Issue</button>
+    </div>
+    <div id="citizenComplaints"></div>
+  </div>
+</div>
+
+<!-- ======================== REPORT ISSUE PAGE ======================== -->
+<div class="page" id="page-report">
+  <div class="container">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h2>📢 Report a Civic Issue</h2>
+        <p>Help us make your city better by reporting problems in your area</p>
+      </div>
+    </div>
+    <div class="report-card">
+      <div id="reportAlert"></div>
+      <div class="form-group">
+        <label>Issue Title *</label>
+        <input type="text" id="rTitle" placeholder="e.g. Large pothole on MG Road near Bus Stop"/>
+      </div>
+      <div class="form-group">
+        <label>Category *</label>
+        <select id="rCategory">
+          <option value="">-- Select Category --</option>
+          <option value="Road / Pothole">🛣️ Road / Pothole</option>
+          <option value="Garbage / Waste">🗑️ Garbage / Waste</option>
+          <option value="Street Light">💡 Street Light</option>
+          <option value="Water Supply">💧 Water Supply</option>
+          <option value="Drainage / Sewage">🚰 Drainage / Sewage</option>
+          <option value="Other">📌 Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="rDesc" placeholder="Describe the issue in detail — size, severity, how long it's been there..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Address / Landmark</label>
+        <input type="text" id="rAddress" placeholder="e.g. Near Gandhi Nagar Bus Stop, MG Road"/>
+      </div>
+      <div class="form-group">
+        <label>📍 GPS Location</label>
+        <div class="loc-box" id="locBox">📡 Detecting your location...</div>
+      </div>
+      <div class="form-group">
+        <label>📷 Upload Photo</label>
+        <input type="file" id="rPhoto" accept="image/*" onchange="previewPhoto(this)"/>
+        <div id="photoPreview" style="margin-top:10px;"></div>
+      </div>
+      <button class="btn btn-primary" onclick="submitComplaint()" style="margin-top:8px;">🚀 Submit Complaint</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======================== ADMIN DASHBOARD ======================== -->
+<div class="page" id="page-admin">
+  <div class="container">
+    <div class="page-header">
+      <div class="page-header-text">
+        <h2>🛠️ Admin Dashboard</h2>
+        <p>Manage and resolve all civic complaints across the city</p>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid"></div>
+
+    <!-- Filter -->
+    <div class="filter-tabs">
+      <button class="filter-tab active" onclick="filterAdmin('All', this)">All</button>
+      <button class="filter-tab" onclick="filterAdmin('Pending', this)">🔴 Pending</button>
+      <button class="filter-tab" onclick="filterAdmin('In Progress', this)">🟡 In Progress</button>
+      <button class="filter-tab" onclick="filterAdmin('Resolved', this)">🟢 Resolved</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Issue</th>
+            <th>Category</th>
+            <th>Reported By</th>
+            <th>Location</th>
+            <th>Date</th>
+            <th>Status</th>
+            <th>Update</th>
+          </tr>
+        </thead>
+        <tbody id="adminTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===================== MOCK DATA =====================
+let currentUser = null;
+let currentFilter = 'All';
+
+let complaints = [
+  { id:1, title:'Large pothole near Gandhi Nagar Bus Stop', category:'Road / Pothole', description:'Very large pothole causing accidents daily', address:'Gandhi Nagar, MG Road', user:'Ravi Kumar', date:'2025-01-15', status:'Pending', icon:'🛣️', bg:'#fff3e0' },
+  { id:2, title:'Overflowing garbage bin not cleaned for 5 days', category:'Garbage / Waste', description:'Garbage bin near park is overflowing', address:'Green Park Colony, Sector 4', user:'Priya Sharma', date:'2025-01-18', status:'In Progress', icon:'🗑️', bg:'#e8f5e9' },
+  { id:3, title:'Street light not working since 2 weeks', category:'Street Light', description:'3 street lights broken, area very dark at night', address:'Laxmi Nagar, Block B', user:'Amit Singh', date:'2025-01-20', status:'Resolved', icon:'💡', bg:'#e3f2fd' },
+  { id:4, title:'Water supply disrupted for 3 days', category:'Water Supply', description:'No water supply coming since 3 days in our area', address:'Rajiv Nagar, Ward 12', user:'Sunita Devi', date:'2025-01-22', status:'Pending', icon:'💧', bg:'#e0f7fa' },
+  { id:5, title:'Broken drainage causing waterlogging', category:'Drainage / Sewage', description:'Sewage water overflowing on road', address:'New Colony, Near School', user:'Deepak Verma', date:'2025-01-23', status:'In Progress', icon:'🚰', bg:'#fce4ec' },
+  { id:6, title:'Road completely broken after rains', category:'Road / Pothole', description:'Entire stretch of 200m road is broken', address:'Station Road, Near Flyover', user:'Meera Patel', date:'2025-01-25', status:'Pending', icon:'🛣️', bg:'#fff3e0' },
+];
+
+let nextId = 7;
+
+// ===================== NAVIGATION =====================
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+
+  // Update navbar
+  const nav = document.getElementById('navLinks');
+  if (!currentUser) {
+    nav.innerHTML = `
+      <button class="nav-btn ${page==='login'?'active':''}" onclick="showPage('login')">Login</button>
+      <button class="nav-btn ${page==='register'?'active':''}" onclick="showPage('register')">Register</button>`;
+  } else if (currentUser.role === 'admin') {
+    nav.innerHTML = `
+      <span class="nav-user">👤 ${currentUser.name}</span>
+      <button class="nav-btn active" onclick="showPage('admin')">Admin Panel</button>
+      <button class="nav-btn" onclick="doLogout()">Logout</button>`;
+  } else {
+    nav.innerHTML = `
+      <span class="nav-user">👤 ${currentUser.name}</span>
+      <button class="nav-btn ${page==='dashboard'?'active':''}" onclick="showPage('dashboard')">My Complaints</button>
+      <button class="nav-btn ${page==='report'?'active':''}" onclick="showPage('report')">Report Issue</button>
+      <button class="nav-btn" onclick="doLogout()">Logout</button>`;
+  }
+
+  if (page === 'dashboard') renderCitizenDashboard();
+  if (page === 'admin') renderAdminDashboard();
+  if (page === 'report') detectLocation();
+}
+
+// ===================== AUTH =====================
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value.trim();
+  if (!email || !pass) { showToast('⚠️ Please enter email and password'); return; }
+
+  if (email === 'admin@civic.com') {
+    currentUser = { name: 'Admin', email, role: 'admin' };
+    showToast('✅ Logged in as Admin!');
+    showPage('admin');
+  } else {
+    const name = email.split('@')[0].replace(/[^a-zA-Z]/g,' ').trim() || 'User';
+    currentUser = { name: name.charAt(0).toUpperCase() + name.slice(1), email, role: 'citizen' };
+    showToast('✅ Logged in successfully!');
+    showPage('dashboard');
+  }
+}
+
+function doRegister() {
+  const name = document.getElementById('regName').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const pass = document.getElementById('regPass').value.trim();
+  if (!name || !email || !pass) { showToast('⚠️ Please fill all fields'); return; }
+  showToast('✅ Registered! Please login now.');
+  document.getElementById('loginEmail').value = email;
+  document.getElementById('loginPass').value = pass;
+  showPage('login');
+}
+
+function doLogout() {
+  currentUser = null;
+  showToast('👋 Logged out!');
+  showPage('login');
+}
+
+// ===================== CITIZEN DASHBOARD =====================
+function renderCitizenDashboard() {
+  document.getElementById('citizenWelcome').textContent = `👋 Welcome, ${currentUser.name}!`;
+  const myComplaints = complaints.filter(c => true); // show all for demo
+  const container = document.getElementById('citizenComplaints');
+
+  if (myComplaints.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div>📭</div><h3>No complaints yet</h3><p>Report your first civic issue!</p></div>`;
+    return;
+  }
+
+  container.innerHTML = myComplaints.map(c => `
+    <div class="complaint-card">
+      <div class="complaint-icon" style="background:${c.bg}">${c.icon}</div>
+      <div class="complaint-info">
+        <h4>${c.title}</h4>
+        <p>📁 ${c.category} &nbsp;|&nbsp; 📍 ${c.address}</p>
+        <p>📅 ${c.date} &nbsp;|&nbsp; 👤 ${c.user}</p>
+      </div>
+      <div>${getBadge(c.status)}</div>
+    </div>
+  `).join('');
+}
+
+// ===================== REPORT ISSUE =====================
+function detectLocation() {
+  const box = document.getElementById('locBox');
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => { box.textContent = `📍 Lat: ${pos.coords.latitude.toFixed(5)}, Lng: ${pos.coords.longitude.toFixed(5)} — Location detected!`; },
+      () => { box.textContent = '📍 Lat: 17.38512, Lng: 78.48640 — Hyderabad (Demo Location)'; }
+    );
+  } else {
+    box.textContent = '📍 Lat: 17.38512, Lng: 78.48640 — Demo Location';
+  }
+}
+
+function previewPhoto(input) {
+  const preview = document.getElementById('photoPreview');
+  if (input.files && input.files[0]) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      preview.innerHTML = `<img src="${e.target.result}" style="max-width:200px;max-height:150px;border-radius:8px;border:2px solid #e0e0e0;"/>`;
+    };
+    reader.readAsDataURL(input.files[0]);
+  }
+}
+
+function submitComplaint() {
+  const title = document.getElementById('rTitle').value.trim();
+  const category = document.getElementById('rCategory').value;
+  const desc = document.getElementById('rDesc').value.trim();
+  const address = document.getElementById('rAddress').value.trim();
+  const alertBox = document.getElementById('reportAlert');
+
+  if (!title || !category) {
+    alertBox.innerHTML = `<div class="alert alert-error">⚠️ Please fill in the Title and Category!</div>`;
+    return;
+  }
+
+  const icons = { 'Road / Pothole':'🛣️','Garbage / Waste':'🗑️','Street Light':'💡','Water Supply':'💧','Drainage / Sewage':'🚰','Other':'📌' };
+  const bgs = { 'Road / Pothole':'#fff3e0','Garbage / Waste':'#e8f5e9','Street Light':'#e3f2fd','Water Supply':'#e0f7fa','Drainage / Sewage':'#fce4ec','Other':'#f3e5f5' };
+
+  const today = new Date().toISOString().split('T')[0];
+  complaints.unshift({
+    id: nextId++, title, category, description: desc,
+    address: address || 'Location not specified',
+    user: currentUser.name, date: today,
+    status: 'Pending',
+    icon: icons[category] || '📌',
+    bg: bgs[category] || '#f5f5f5'
+  });
+
+  alertBox.innerHTML = `<div class="alert alert-success">✅ Complaint submitted successfully! Redirecting...</div>`;
+  document.getElementById('rTitle').value = '';
+  document.getElementById('rCategory').value = '';
+  document.getElementById('rDesc').value = '';
+  document.getElementById('rAddress').value = '';
+  document.getElementById('photoPreview').innerHTML = '';
+  setTimeout(() => { alertBox.innerHTML = ''; showPage('dashboard'); }, 1800);
+}
+
+// ===================== ADMIN DASHBOARD =====================
+function renderAdminDashboard(filter) {
+  filter = filter || currentFilter;
+  const total = complaints.length;
+  const pending = complaints.filter(c => c.status === 'Pending').length;
+  const inProgress = complaints.filter(c => c.status === 'In Progress').length;
+  const resolved = complaints.filter(c => c.status === 'Resolved').length;
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card s-total"><h3>${total}</h3><p>Total Complaints</p></div>
+    <div class="stat-card s-pending"><h3>${pending}</h3><p>🔴 Pending</p></div>
+    <div class="stat-card s-progress"><h3>${inProgress}</h3><p>🟡 In Progress</p></div>
+    <div class="stat-card s-resolved"><h3>${resolved}</h3><p>🟢 Resolved</p></div>
+  `;
+
+  const filtered = filter === 'All' ? complaints : complaints.filter(c => c.status === filter);
+
+  if (filtered.length === 0) {
+    document.getElementById('adminTableBody').innerHTML = `
+      <tr><td colspan="8" style="text-align:center;padding:40px;color:#aaa;">No complaints found for this filter</td></tr>`;
+    return;
+  }
+
+  document.getElementById('adminTableBody').innerHTML = filtered.map(c => `
+    <tr>
+      <td><strong>#${c.id}</strong></td>
+      <td>
+        <strong>${c.title}</strong><br/>
+        <small style="color:#aaa">${c.description?.slice(0,45) || ''}...</small>
+      </td>
+      <td><span style="background:#f0f4f8;padding:4px 10px;border-radius:12px;font-size:12px;">${c.icon} ${c.category}</span></td>
+      <td>${c.user}</td>
+      <td style="font-size:13px;color:#666">📍 ${c.address}</td>
+      <td style="font-size:13px;color:#888">${c.date}</td>
+      <td>${getBadge(c.status)}</td>
+      <td>
+        <select class="status-select" onchange="updateStatus(${c.id}, this.value)">
+          <option ${c.status==='Pending'?'selected':''}>Pending</option>
+          <option ${c.status==='In Progress'?'selected':''}>In Progress</option>
+          <option ${c.status==='Resolved'?'selected':''}>Resolved</option>
+        </select>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function filterAdmin(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAdminDashboard(filter);
+}
+
+function updateStatus(id, status) {
+  const c = complaints.find(c => c.id === id);
+  if (c) { c.status = status; renderAdminDashboard(); showToast(`✅ Status updated to "${status}"`); }
+}
+
+// ===================== HELPERS =====================
+function getBadge(status) {
+  const map = { 'Pending':'badge-pending', 'In Progress':'badge-progress', 'Resolved':'badge-resolved' };
+  return `<span class="badge ${map[status]}">${status}</span>`;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// Start
+showPage('login');
+</script>
+</body>
+</html>
